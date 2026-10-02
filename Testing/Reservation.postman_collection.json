@@ -146,7 +146,7 @@
               "pm.test('reservation created', function () {",
               "    pm.response.to.have.status(201);",
               "    const reservation = pm.response.json();",
-              "    pm.expect(reservation.status).to.eql('confirmed');",
+              "    pm.expect(reservation.status).to.eql('booked');",
               "    pm.collectionVariables.set('reservationId', reservation.id);",
               "});"
             ]
@@ -239,7 +239,7 @@
       "request": {
         "method": "POST",
         "header": [],
-        "url": "{{baseUrl}}/reservations/{{reservationId}}/cancel"
+        "url": "{{baseUrl}}/reservations/cancel/{{reservationId}}"
       },
       "response": []
     },

@@ -1,6 +1,7 @@
 package com.show.reservation.service;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,23 +44,34 @@ public class ShowService {
 		Show show = showRepository.save(new Show(r.name(), r.price_paise(), limit));
 		UUID id = show.getId();
 		seatRepository.saveAll(r.seats().stream().map(s -> new Seat(id, s)).toList());
-		return get(id);
+		return get(id, "admin", true);
 	}
 
 	@Transactional(readOnly = true)
-	public ShowResponse get(UUID id) {
+	public ShowResponse get(UUID id, String userId, boolean isAdmin) {
 		Show show = showRepository.findById(id).orElseThrow(() -> new ApiException(404, "not_found", "show not found"));
-		Map<String, String> map = new LinkedHashMap<>();
-		int a = 0, h = 0, c = 0;
+		Map<String, ShowResponse.SeatDetails> map = new LinkedHashMap<>();
+		int availableCount = 0, heldCount = 0, bookedCount = 0;
 		for (Seat s : seatRepository.findAllForShow(id)) { // one snapshot -> invariant is exact
-			map.put(s.getId().seatNo(), s.getStatus());
+			boolean canViewBooking = isAdmin || userId != null && userId.equals(s.getUserId());
+			String bookedBy = canViewBooking ? s.getUserId() : null;
+			String reservationId = canViewBooking && s.getReservationId() != null
+					? s.getReservationId().toString() : null;
+			map.put(s.getId().seatNo(), new ShowResponse.SeatDetails(s.getStatus(), bookedBy, reservationId));
 			switch (s.getStatus()) {
-				case "available" -> a++;
-				case "held" -> h++;
-				default -> c++;
+			case "available" -> availableCount++;
+			case "held" -> heldCount++;
+			default -> bookedCount++;
 			}
 		}
 		return new ShowResponse(id.toString(), show.getName(), show.getPricePaise(), show.getPerUserLimit(), map.size(),
-				a, h, c, map);
+				availableCount, heldCount, bookedCount, map);
+	}
+
+	@Transactional(readOnly = true)
+	public List<ShowResponse> getAllShows(String userId, boolean isAdmin) {
+		return showRepository.findAll().stream()
+				.map(show -> get(show.getId(), userId, isAdmin))
+				.toList();
 	}
 }

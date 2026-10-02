@@ -27,20 +27,20 @@ public class ReservationController {
 		this.metrics = metrics;
 	}
 
-	@PostMapping("/shows/{id}/reserve")
-	public ResponseEntity<ReservationResponse> reserve(@PathVariable String id, @RequestBody ReserveRequest body,
+	@PostMapping("/shows/reserve/{showId}")
+	public ResponseEntity<ReservationResponse> reserve(@PathVariable String showId, @RequestBody ReserveRequest body,
 			@RequestHeader(value = "Idempotency-Key", required = false) String headerKey, HttpServletRequest req) {
 		String userId = (String) req.getAttribute("userId");
 		String key = headerKey != null ? headerKey : body.idempotency_key();
 		if (key == null || key.isBlank() || body.seats() == null || body.seats().isEmpty())
 			throw new ApiException(400, "bad_request", "seats and idempotency key required");
 		try {
-			var result = svc.reserve(AppUtil.parse(id), userId, key, body.seats());
+			var result = svc.reserve(AppUtil.parse(showId), userId, key, body.seats());
 			if (result.replay()) {
 				metrics.counter("reservations_declined_total", "reason", "idempotent_replay").increment();
 				return ResponseEntity.ok(result.body()); // 200 for a replay
 			}
-			metrics.counter("reservations_confirmed_total").increment();
+			metrics.counter("reservations_booked_total").increment();
 			return ResponseEntity.status(201).body(result.body());
 		} catch (ApiException e) {
 			if (e.status == 409)
@@ -49,8 +49,8 @@ public class ReservationController {
 		}
 	}
 
-	@PostMapping("/reservations/{id}/cancel")
-	public ReservationResponse cancel(@PathVariable String id, HttpServletRequest req) {
-		return svc.cancel(AppUtil.parse(id), (String) req.getAttribute("userId"));
+	@PostMapping("/reservations/cancel/{reservationId}")
+	public ReservationResponse cancel(@PathVariable String reservationId, HttpServletRequest req) {
+		return svc.cancel(AppUtil.parse(reservationId), (String) req.getAttribute("userId"));
 	}
 }

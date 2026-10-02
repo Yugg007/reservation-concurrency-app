@@ -27,20 +27,20 @@ public interface SeatRepository extends JpaRepository<Seat, SeatId> {
     List<Seat> findAllForShow(@Param("showId") UUID showId);
 
     @Query("select count(s) from Seat s where s.id.showId = :showId and s.userId = :userId " +
-           "and s.status in ('held','confirmed')")
+           "and s.status in ('held','booked')")
     long countOwned(@Param("showId") UUID showId, @Param("userId") String userId);
 
-    // Guarded conditional update: only flips seats that are STILL available
+    // Guarded conditional update: only books seats that are STILL available
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update Seat s set s.status = 'confirmed', s.userId = :userId, s.reservationId = :rid " +
+    @Query("update Seat s set s.status = 'booked', s.userId = :userId, s.reservationId = :rid " +
            "where s.id.showId = :showId and s.id.seatNo in :seatNos and s.status = 'available'")
-    int confirmIfAvailable(@Param("showId") UUID showId, @Param("seatNos") Collection<String> seatNos,
-                           @Param("userId") String userId, @Param("rid") UUID rid);
+    int bookIfAvailable(@Param("showId") UUID showId, @Param("seatNos") Collection<String> seatNos,
+                        @Param("userId") String userId, @Param("rid") UUID rid);
 
-    // Guarded release: only frees seats still confirmed to THIS reservation
+    // Guarded release: only frees seats still booked by THIS reservation
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Seat s set s.status = 'available', s.userId = null, s.reservationId = null " +
-           "where s.reservationId = :rid and s.status = 'confirmed'")
+           "where s.reservationId = :rid and s.status = 'booked'")
     int release(@Param("rid") UUID rid);
 
 	// Per-user serialization. Cast because Hibernate can't map Postgres' void

@@ -16,7 +16,7 @@ import jakarta.persistence.Transient;
 @Table(name = "seats")
 public class Seat implements Persistable<SeatId> {
     @EmbeddedId private SeatId id;
-    private String status;                                   // available | held | confirmed
+    private String status;                                   // available | held | booked
     @Column(name = "user_id") private String userId;
     @Column(name = "reservation_id") private UUID reservationId;
 
@@ -28,6 +28,7 @@ public class Seat implements Persistable<SeatId> {
     public SeatId getId() { return id; }
     public String getStatus() { return status; }
     public String getUserId() { return userId; }
+    public UUID getReservationId() { return reservationId; }
 
     @Override public boolean isNew() { return isNew; }
     @PostLoad @PostPersist void markNotNew() { this.isNew = false; }

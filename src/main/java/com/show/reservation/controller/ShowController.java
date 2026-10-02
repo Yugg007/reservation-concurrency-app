@@ -1,6 +1,8 @@
 package com.show.reservation.controller;
 
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,16 +26,25 @@ public class ShowController {
 		this.showService = showService;
 	}
 
-	@PostMapping("/showService")
+	@PostMapping("/create/show")
 	public ResponseEntity<ShowResponse> create(@RequestBody CreateShowRequest body, HttpServletRequest req) {
 		if (!Boolean.TRUE.equals(req.getAttribute("admin")))
 			throw new ApiException(403, "forbidden", "admin only");
 		return ResponseEntity.status(201).body(showService.create(body));
 	}
 
-	@GetMapping("/showService/{id}")
-	public ShowResponse get(@PathVariable String id) {
-		return showService.get(AppUtil.parse(id));
+	@GetMapping("/show/{id}")
+	public ShowResponse get(@PathVariable String id, HttpServletRequest req) {
+		String userId = (String) req.getAttribute("userId");
+		Boolean isAdmin =  Boolean.TRUE.equals(req.getAttribute("admin"));
+		return showService.get(AppUtil.parse(id), userId, isAdmin);
+	}
+	
+	@GetMapping("/shows")
+	public List<ShowResponse> getAllShows(HttpServletRequest req) {
+		String userId = (String) req.getAttribute("userId");
+		Boolean isAdmin =  Boolean.TRUE.equals(req.getAttribute("admin"));
+		return showService.getAllShows(userId, isAdmin);
 	}
 
 }

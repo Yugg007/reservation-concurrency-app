@@ -21,13 +21,13 @@ public class Reservation {
     @Column(name = "request_hash") private String requestHash;
     private String seats;                                    // sorted, comma separated
     @Column(name = "amount_paise") private long amountPaise;
-    private String status;                                   // confirmed | cancelled
+    private String status;                                   // booked | cancelled
     @Column(name = "created_at", insertable = false, updatable = false) private Instant createdAt;
 
     protected Reservation() {}
     public Reservation(UUID showId, String userId, String key, String hash, String seats, long amount) {
         this.showId = showId; this.userId = userId; this.idempotencyKey = key;
-        this.requestHash = hash; this.seats = seats; this.amountPaise = amount; this.status = "confirmed";
+        this.requestHash = hash; this.seats = seats; this.amountPaise = amount; this.status = "booked";
     }
     public UUID getId() { return id; }
     public UUID getShowId() { return showId; }

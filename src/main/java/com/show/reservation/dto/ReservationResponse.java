@@ -3,7 +3,7 @@ package com.show.reservation.dto;
 import java.util.List;
 
 public record ReservationResponse(
-	String id,
+	String reservationId,
 	String show_id,
 	String user_id,
 	List<String> seats,

@@ -69,12 +69,12 @@ public class ReservationService {
         long amount = show.getPricePaise() * wanted.size();
         Reservation saved = reservationRepository.saveAndFlush(
                 new Reservation(showId, userId, key, hash, seatsCsv, amount));
-        int updated = seatRepository.confirmIfAvailable(showId, wanted, userId, saved.getId());
+        int updated = seatRepository.bookIfAvailable(showId, wanted, userId, saved.getId());
         if (updated != wanted.size())            // impossible after row locks; fail safe, rolls back
             throw new ApiException(409, "seat_taken", "seat taken");
 
         return new Result(new ReservationResponse(saved.getId().toString(), showId.toString(),
-                userId, wanted, amount, "confirmed"), false);
+                userId, wanted, amount, "booked"), false);
     }
 
     @Transactional
@@ -84,7 +84,7 @@ public class ReservationService {
         if (r == null || !userId.equals(r.getUserId()))
             throw new ApiException(404, "not_found", "reservation not found");
 
-        if ("confirmed".equals(r.getStatus())) {
+        if ("booked".equals(r.getStatus())) {
             // Order matters: release() flushes pending changes, then clears the persistence context.
             r.setStatus("cancelled");
             seatRepository.release(resId);
