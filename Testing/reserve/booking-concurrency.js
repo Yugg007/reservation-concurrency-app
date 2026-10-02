@@ -2,10 +2,11 @@ import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 
 const vus = Number(__ENV.VUS || 100);
-const baseUrl = __ENV.BASE_URL || 'http://localhost:8080';
+const baseUrl = __ENV.BASE_URL || 'https://reservation-concurrency-app.onrender.com';
 const showId = __ENV.SHOW_ID;
 const rawSeats = __ENV.SEATS || __ENV.SEAT || 'A2';
 const seats = [...new Set(rawSeats.split(',').map((seat) => seat.trim()))];
+const runId = __ENV.RUN_ID || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 if (!showId) {
   throw new Error(
@@ -40,14 +41,12 @@ export const options = {
 
 export default function () {
   /*
-   * Every virtual user represents a different user.
-   *
-  * Every virtual user attempts to book the same seat list together.
-  * Only ONE request should successfully reserve the entire list.
-   *   ...
+   * Each virtual user attempts to book the same seat list as a distinct user.
+   * Only one request should successfully reserve the entire list.
    */
 
-  const key = `load-${__VU}-${__ITER}`;
+  const key = `load-${runId}-${__VU}-${__ITER}`;
+  const userId = `load-user-${runId}-${__VU}`;
 
   const response = http.post(
     `${baseUrl}/shows/reserve/${showId}`,
@@ -57,7 +56,7 @@ export default function () {
     }),
     {
       headers: {
-        Authorization: `Bearer load-user-${__VU}`,
+        Authorization: `Bearer ${userId}`,
         'Content-Type': 'application/json',
         'Idempotency-Key': key,
       },
@@ -68,6 +67,7 @@ export default function () {
     created.add(1);
   } else if (response.status === 409) {
     conflicts.add(1);
+    console.log(`Declined: status=${response.status}, body=${response.body}`);
   } else {
     unexpected.add(1);
 

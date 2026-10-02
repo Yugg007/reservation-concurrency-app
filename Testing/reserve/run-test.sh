@@ -31,10 +31,10 @@ if [ -z "$SHOW_ID" ]; then
     exit 1
 fi
 
-read -p "Enter Base URL [http://localhost:8080]: " BASE_URL
+read -p "Enter Base URL [https://reservation-concurrency-app.onrender.com]: " BASE_URL
 
 if [ -z "$BASE_URL" ]; then
-    BASE_URL="http://localhost:8080"
+    BASE_URL="https://reservation-concurrency-app.onrender.com"
 fi
 
 read -p "Enter number of concurrent users [100]: " VUS
@@ -78,8 +78,11 @@ k6 run \
     -e VUS="$VUS" \
     -e SEATS="$SEATS" \
     booking-concurrency.js
+K6_EXIT=$?
 
 echo ""
 echo "============================================================"
 echo "Test execution completed."
 echo "============================================================"
+
+exit "$K6_EXIT"

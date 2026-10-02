@@ -38,10 +38,10 @@ if "%SHOW_ID%"=="" (
     exit /b 1
 )
 
-set BASE_URL=http://localhost:8080
+set BASE_URL=https://reservation-concurrency-app.onrender.com
 
 echo.
-set /p BASE_URL_INPUT=Enter Base URL [http://localhost:8080]: 
+set /p BASE_URL_INPUT=Enter Base URL [https://reservation-concurrency-app.onrender.com]: 
 
 if not "%BASE_URL_INPUT%"=="" (
     set BASE_URL=%BASE_URL_INPUT%
