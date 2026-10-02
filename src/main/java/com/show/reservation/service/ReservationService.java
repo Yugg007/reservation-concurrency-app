@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.show.reservation.common.ApiException;
 import com.show.reservation.dto.ReservationResponse;
 import com.show.reservation.entity.Reservation;
 import com.show.reservation.entity.Seat;
@@ -29,7 +30,7 @@ public class ReservationService {
     public record Result(ReservationResponse body, boolean replay) {}
 
     @Transactional
-    public Result reserve(UUID showId, String userId, String key, List<String> rawSeats) throws Exception {
+    public Result reserve(UUID showId, String userId, String key, List<String> rawSeats) {
         List<String> wanted = rawSeats.stream().distinct().sorted().toList();   // deterministic lock order
         String seatsCsv = String.join(",", wanted);
         String hash = showId + "|" + seatsCsv;
@@ -42,26 +43,27 @@ public class ReservationService {
         if (existing.isPresent()) {
             Reservation e = existing.get();
             if (!hash.equals(e.getRequestHash()))
-                throw new Exception("idempotency_mismatch key reused with a different request");
+                throw new ApiException(409, "idempotency_mismatch", "key reused with a different request");
             return new Result(toResponse(e), true);
         }
 
         // (3) Show lookup
         Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new Exception("not_found show not found"));
+                .orElseThrow(() -> new ApiException(404, "not_found", "show not found"));
 
         // (4) Per-user limit
         long owned = seatRepository.countOwned(showId, userId);
         if (owned + wanted.size() > show.getPerUserLimit())
-            throw new Exception("per_user_limit, limit of " + show.getPerUserLimit() + " seats per show");
+            throw new ApiException(409, "per_user_limit",
+                    "limit of " + show.getPerUserLimit() + " seats per show");
 
         // (5) Lock seat rows in sorted order, all-or-nothing
         List<Seat> locked = seatRepository.lockSeats(showId, wanted);
         if (locked.size() != wanted.size())
-            throw new Exception("unknown_seat, one or more seats do not exist");
+            throw new ApiException(404, "unknown_seat", "one or more seats do not exist");
         for (Seat s : locked)
             if (!"available".equals(s.getStatus()))
-                throw new Exception("seat_taken, seat " + s.getId().seatNo() + " already taken");
+                throw new ApiException(409, "seat_taken", "seat " + s.getId().seatNo() + " already taken");
 
         // (6) Write: reservation row, then guarded update
         long amount = show.getPricePaise() * wanted.size();
@@ -69,18 +71,18 @@ public class ReservationService {
                 new Reservation(showId, userId, key, hash, seatsCsv, amount));
         int updated = seatRepository.confirmIfAvailable(showId, wanted, userId, saved.getId());
         if (updated != wanted.size())            // impossible after row locks; fail safe, rolls back
-            throw new Exception("seat_taken, seat taken");
+            throw new ApiException(409, "seat_taken", "seat taken");
 
         return new Result(new ReservationResponse(saved.getId().toString(), showId.toString(),
                 userId, wanted, amount, "confirmed"), false);
     }
 
     @Transactional
-    public ReservationResponse cancel(UUID resId, String userId) throws Exception {
+    public ReservationResponse cancel(UUID resId, String userId) {
         Reservation r = reservationRepository.findForUpdate(resId).orElse(null);
         // not found OR not yours -> same 404 (don't leak existence)
         if (r == null || !userId.equals(r.getUserId()))
-            throw new Exception("not_found, reservation not found");
+            throw new ApiException(404, "not_found", "reservation not found");
 
         if ("confirmed".equals(r.getStatus())) {
             // Order matters: release() flushes pending changes, then clears the persistence context.

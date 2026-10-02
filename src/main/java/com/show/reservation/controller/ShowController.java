@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.show.reservation.common.ApiException;
 import com.show.reservation.dto.CreateShowRequest;
 import com.show.reservation.dto.ShowResponse;
 import com.show.reservation.service.ShowService;
@@ -24,22 +25,22 @@ public class ShowController {
 	}
 
 	@PostMapping("/shows")
-	public ResponseEntity<ShowResponse> create(@RequestBody CreateShowRequest body, HttpServletRequest req) throws Exception {
+	public ResponseEntity<ShowResponse> create(@RequestBody CreateShowRequest body, HttpServletRequest req) {
 		if (!Boolean.TRUE.equals(req.getAttribute("admin")))
-			throw new Exception("forbidden, admin only");
+			throw new ApiException(403, "forbidden", "admin only");
 		return ResponseEntity.status(201).body(shows.create(body));
 	}
 
 	@GetMapping("/shows/{id}")
-	public ShowResponse get(@PathVariable String id) throws Exception {
+	public ShowResponse get(@PathVariable String id) {
 		return shows.get(parse(id));
 	}
 
-	static UUID parse(String s) throws Exception {
+	static UUID parse(String s) {
 		try {
 			return UUID.fromString(s);
 		} catch (IllegalArgumentException e) {
-			throw new Exception("not_found, invalid id");
+			throw new ApiException(404, "not_found", "invalid id");
 		}
 	}
 }

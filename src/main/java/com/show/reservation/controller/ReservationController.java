@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
+import com.show.reservation.common.ApiException;
 import com.show.reservation.dto.ReservationResponse;
 import com.show.reservation.dto.ReserveRequest;
 import com.show.reservation.service.ReservationService;
@@ -27,11 +28,11 @@ public class ReservationController {
 
 	@PostMapping("/shows/{id}/reserve")
 	public ResponseEntity<ReservationResponse> reserve(@PathVariable String id, @RequestBody ReserveRequest body,
-			@RequestHeader(value = "Idempotency-Key", required = false) String headerKey, HttpServletRequest req) throws java.lang.Exception {
+			@RequestHeader(value = "Idempotency-Key", required = false) String headerKey, HttpServletRequest req) {
 		String userId = (String) req.getAttribute("userId");
 		String key = headerKey != null ? headerKey : body.idempotency_key();
 		if (key == null || key.isBlank() || body.seats() == null || body.seats().isEmpty())
-			throw new Exception("bad_request" + "seats and idempotency key required");
+			throw new ApiException(400, "bad_request", "seats and idempotency key required");
 		try {
 			var result = svc.reserve(ShowController.parse(id), userId, key, body.seats());
 			if (result.replay()) {
@@ -40,13 +41,15 @@ public class ReservationController {
 			}
 			metrics.counter("reservations_confirmed_total").increment();
 			return ResponseEntity.status(201).body(result.body());
-		} catch (Exception e) {
+		} catch (ApiException e) {
+			if (e.status == 409)
+				metrics.counter("reservations_declined_total", "reason", e.code).increment();
 			throw e;
 		}
 	}
 
 	@PostMapping("/reservations/{id}/cancel")
-	public ReservationResponse cancel(@PathVariable String id, HttpServletRequest req) throws java.lang.Exception {
+	public ReservationResponse cancel(@PathVariable String id, HttpServletRequest req) {
 		return svc.cancel(ShowController.parse(id), (String) req.getAttribute("userId"));
 	}
 }

@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.show.reservation.common.ApiException;
 import com.show.reservation.dto.CreateShowRequest;
 import com.show.reservation.dto.ShowResponse;
 import com.show.reservation.entity.Seat;
@@ -25,19 +26,19 @@ public class ShowService {
 	}
 
 	@Transactional
-	public ShowResponse create(CreateShowRequest r) throws Exception {
+	public ShowResponse create(CreateShowRequest r) {
 		if (r.name() == null || r.name().isBlank() || r.seats() == null || r.seats().isEmpty()
 				|| r.price_paise() == null || r.price_paise() <= 0
 				|| r.seats().stream().anyMatch(s -> s == null || s.isBlank()))
-			throw new Exception("bad_request, name, seats, price_paise required");
+			throw new ApiException(400, "bad_request", "name, seats, price_paise required");
 
 		if (r.seats().stream().distinct().count() != r.seats().size())
-			throw new Exception("bad_request, duplicate seats");
+			throw new ApiException(400, "bad_request", "duplicate seats");
 
 		int limit = r.per_user_limit() == null ? 4 : r.per_user_limit();
 
 		if (limit < 1)
-			throw new Exception("bad_request, per_user_limit must be >= 1");
+			throw new ApiException(400, "bad_request", "per_user_limit must be >= 1");
 
 		Show show = showRepository.save(new Show(r.name(), r.price_paise(), limit));
 		UUID id = show.getId();
@@ -46,8 +47,8 @@ public class ShowService {
 	}
 
 	@Transactional(readOnly = true)
-	public ShowResponse get(UUID id) throws Exception {
-		Show show = showRepository.findById(id).orElseThrow(() -> new Exception("not_found, show not found"));
+	public ShowResponse get(UUID id) {
+		Show show = showRepository.findById(id).orElseThrow(() -> new ApiException(404, "not_found", "show not found"));
 		Map<String, String> map = new LinkedHashMap<>();
 		int a = 0, h = 0, c = 0;
 		for (Seat s : seatRepository.findAllForShow(id)) { // one snapshot -> invariant is exact
