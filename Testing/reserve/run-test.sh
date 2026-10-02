@@ -43,10 +43,10 @@ if [ -z "$VUS" ]; then
     VUS=100
 fi
 
-read -p "Enter seat to test [A2]: " SEAT
+read -p "Enter seats to test (comma-separated) [A2]: " SEATS
 
-if [ -z "$SEAT" ]; then
-    SEAT="A2"
+if [ -z "$SEATS" ]; then
+    SEATS="A2"
 fi
 
 # ------------------------------------------------------------
@@ -60,7 +60,7 @@ echo "============================================================"
 echo ""
 echo "Base URL          : $BASE_URL"
 echo "Show ID           : $SHOW_ID"
-echo "Seat              : $SEAT"
+echo "Seats             : $SEATS"
 echo "Concurrent Users  : $VUS"
 echo ""
 echo "============================================================"
@@ -76,7 +76,7 @@ k6 run \
     -e BASE_URL="$BASE_URL" \
     -e SHOW_ID="$SHOW_ID" \
     -e VUS="$VUS" \
-    -e SEAT="$SEAT" \
+    -e SEATS="$SEATS" \
     booking-concurrency.js
 
 echo ""

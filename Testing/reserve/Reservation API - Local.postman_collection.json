@@ -1,0 +1,344 @@
+{
+  "info": {
+    "_postman_id": "b271b6b0-75da-413b-9d9a-6bbd0398557b",
+    "name": "Reservation API - Local",
+    "description": "End-to-end local flow: create a show, read it, reserve a seat, replay the idempotent request, cancel, and verify the seat is released. Run requests in order. Update adminToken if APP_ADMIN_TOKEN is set to a different value in Spring Boot.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "18685238"
+  },
+  "item": [
+    {
+      "name": "1. Create show",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.collectionVariables.set('runId', Date.now().toString());"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('show created', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const show = pm.response.json();",
+              "    pm.expect(show.id).to.be.a('string');",
+              "    pm.collectionVariables.set('showId', show.id);",
+              "    pm.collectionVariables.set('idempotencyKey', 'postman-' + pm.collectionVariables.get('runId'));",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{auth_secret_1do2}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Postman test show 2\",\n    \"seats\": [\n        \"A1\",\n        \"A2\",\n        \"B1\",\n        \"B2\"\n    ],\n    \"price_paise\": 25000,\n    \"per_user_limit\": 4\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/create/show",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "create",
+            "show"
+          ]
+        },
+        "description": "Creates a fresh show and saves its ID for the following requests."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get show",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('show can be fetched', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('showId'));",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{auth_secret_1do2}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/show/f92c7cc9-c126-4095-ba7f-67309db53988",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "show",
+            "f92c7cc9-c126-4095-ba7f-67309db53988"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Show",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{auth_secret_1do2}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/shows",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "shows"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Reserve seat",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('reservation created', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const reservation = pm.response.json();",
+              "    pm.expect(reservation.status).to.eql('confirmed');",
+              "    pm.collectionVariables.set('reservationId', reservation.id);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "2",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "3"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seats\": [\"A1\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/shows/reserve/e8dd9aad-73a7-4c92-8b6d-524304618add",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "shows",
+            "reserve",
+            "e8dd9aad-73a7-4c92-8b6d-524304618add"
+          ]
+        },
+        "description": "Books A1 using both the optional header key and body fallback key."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Cancel reservation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('reservation cancelled', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().status).to.eql('cancelled');",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "2",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/reservations/cancel/a7c94cf6-0d3c-4d4f-89c5-934031c3645a",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "reservations",
+            "cancel",
+            "a7c94cf6-0d3c-4d4f-89c5-934031c3645a"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "userToken",
+      "value": "postman-test-user"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "showId",
+      "value": ""
+    },
+    {
+      "key": "reservationId",
+      "value": ""
+    },
+    {
+      "key": "idempotencyKey",
+      "value": ""
+    },
+    {
+      "key": "auth_secret_1do2",
+      "secret": true
+    }
+  ]
+}

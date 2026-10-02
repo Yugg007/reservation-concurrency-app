@@ -55,10 +55,10 @@ if "%VUS%"=="" (
 )
 
 echo.
-set /p SEAT=Enter seat to test [A2]: 
+set /p SEATS=Enter seats to test (comma-separated) [A2]: 
 
-if "%SEAT%"=="" (
-    set SEAT=A2
+if "%SEATS%"=="" (
+    set SEATS=A2
 )
 
 echo.
@@ -68,7 +68,7 @@ echo ============================================================
 echo.
 echo Base URL          : %BASE_URL%
 echo Show ID           : %SHOW_ID%
-echo Seat              : %SEAT%
+echo Seats             : %SEATS%
 echo Concurrent Users  : %VUS%
 echo.
 echo ============================================================
@@ -84,7 +84,7 @@ k6 run ^
   -e BASE_URL=%BASE_URL% ^
   -e SHOW_ID=%SHOW_ID% ^
   -e VUS=%VUS% ^
-  -e SEAT=%SEAT% ^
+    -e SEATS="%SEATS%" ^
   booking-concurrency.js
 
 echo.
